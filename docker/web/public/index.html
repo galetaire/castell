@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Castell</title>
   <link rel="icon" href="icon.jpeg" type="image/jpeg">
+  <link rel="preload" href="fonts/ibm-plex-sans-400.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="style.css">
   <script>
     // Apply a saved dark theme before the page draws, so it doesn't flash light first
@@ -14,22 +15,48 @@
   </script>
 </head>
 <body>
-  <header class="top">
-    <a class="brand" href="#/">
-      <img src="icon.jpeg" alt="" width="36" height="36">
-      <span>
-        <strong>Castell</strong>
-        <small>Handshake websites, secured with DANE</small>
-      </span>
-    </a>
-    <div class="top-actions">
-      <span id="caddy-status" class="pill" hidden></span>
-      <button type="button" id="theme-toggle" class="small"></button>
-    </div>
-  </header>
-  <main id="app" aria-live="polite">
-    <p class="muted">Loading…</p>
-  </main>
+  <div class="shell">
+    <header class="mobile-bar">
+      <button type="button" class="menu-button" id="menu-button" aria-label="Open menu" aria-expanded="false" aria-controls="side">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+      <img src="icon.jpeg" alt="" width="30" height="30">
+      <strong>Castell</strong>
+      <span class="mobile-status" id="mobile-status"></span>
+    </header>
+
+    <aside class="side" id="side">
+      <a class="brand" href="#/">
+        <img src="icon.jpeg" alt="" width="38" height="38">
+        <span><strong>Castell</strong><small>DANE sites for Handshake</small></span>
+      </a>
+      <nav class="side-nav" aria-label="Main">
+        <a class="side-link" href="#/" data-nav="overview">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Overview
+        </a>
+        <a class="side-link" href="#/settings" data-nav="settings">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M4 12h16M12 4c2.5 2.5 2.5 13.5 0 16M12 4c-2.5 2.5-2.5 13.5 0 16"/></svg>Connection &amp; router
+        </a>
+      </nav>
+      <div>
+        <div class="side-head">
+          <span class="side-label" id="sites-label">Sites</span>
+          <a class="side-add" href="#/add" aria-label="Add a site" data-nav="add">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          </a>
+        </div>
+        <ul class="side-sites" id="side-sites" aria-labelledby="sites-label"></ul>
+      </div>
+      <div class="side-foot">
+        <div class="server-status" id="server-status" hidden></div>
+        <button type="button" class="theme-toggle" id="theme-toggle"></button>
+      </div>
+    </aside>
+
+    <main id="app" tabindex="-1">
+      <p class="muted">Loading…</p>
+    </main>
+  </div>
   <div id="toast" class="toast" role="status" hidden></div>
   <script src="app.js"></script>
 </body>

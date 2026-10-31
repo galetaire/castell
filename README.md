@@ -64,6 +64,7 @@ docker/Dockerfile                  the web container image
 docker/web/server.js               HTTP server and API
 docker/web/lib/                    keys and certificates, Caddyfile, DNS client, checks, docs
 docker/web/public/                 the UI (plain HTML, CSS and JavaScript)
+docker/web/public/fonts/           IBM Plex Sans and Mono, bundled (SIL Open Font License, OFL.txt)
 .github/workflows/build-image.yml  builds and pushes ghcr.io/<owner>/castell (amd64 + arm64)
 ```
 
