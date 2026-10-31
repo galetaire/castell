@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Llar</title>
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <a class="brand" href="#/">
+      <img src="icon.svg" alt="" width="36" height="36">
+      <span>
+        <strong>Llar</strong>
+        <small>Handshake websites, secured with DANE</small>
+      </span>
+    </a>
+    <span id="caddy-status" class="pill" hidden></span>
+  </header>
+  <main id="app" aria-live="polite">
+    <p class="muted">Loading…</p>
+  </main>
+  <div id="toast" class="toast" role="status" hidden></div>
+  <script src="app.js"></script>
+</body>
+</html>

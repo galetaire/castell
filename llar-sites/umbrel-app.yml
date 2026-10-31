@@ -1,0 +1,45 @@
+manifestVersion: 1
+id: llar-sites
+name: Llar
+tagline: Host your Handshake websites on your Umbrel, secured with DANE
+icon: https://raw.githubusercontent.com/galetaire/llar/main/llar-sites/icon.svg
+category: networking
+version: "0.1.0"
+port: 4747
+description: >-
+  Llar ("home" in Catalan) hosts websites for your Handshake (HNS) names on
+  your own Umbrel, over HTTPS secured with DANE instead of a certificate
+  authority.
+
+
+  Add a name and Llar creates its private key and certificate, computes the
+  TLSA record, configures the web server (Caddy) and gives you every value you
+  need to publish: the A and TLSA records for your DNS host, and the port
+  forward for your router. Upload a static site, or point the name at another
+  app for a dynamic one. One install serves as many names as you like.
+
+
+  A built-in check confirms that the certificate being served matches your
+  TLSA record and that your DNS records are live through a Handshake resolver.
+
+
+  Llar publishes Caddy on host port 8443, because umbrelOS uses port 443
+  itself. Forward external TCP port 443 on your router to port 8443 of your
+  Umbrel. Visitors need a DANE-capable Handshake resolver, such as Fingertip
+  or letsdane.
+
+
+  ⚠️ Download a backup of each site's private key. Uninstalling this app
+  deletes the keys, and a new key means a new TLSA record.
+developer: galetaire
+website: https://github.com/galetaire/llar
+submitter: galetaire
+submission: https://github.com/galetaire/llar
+repo: https://github.com/galetaire/llar
+support: https://github.com/galetaire/llar/issues
+gallery: []
+releaseNotes: ""
+dependencies: []
+path: ""
+defaultUsername: ""
+defaultPassword: ""
