@@ -65,7 +65,7 @@ async function checkRecord(check, server, name, type, matches, describeMismatch)
   }
   const values = result.answers.map(answer => answer.value);
   if (result.rcode === 'REFUSED') {
-    return {...check, status: 'fail', detail: `${server} does not host this zone. Create the zone at your DNS host, or change the DNS server in Llar's settings.`};
+    return {...check, status: 'fail', detail: `${server} does not host this zone. Create the zone at your DNS host, or change the DNS server in Castell's settings.`};
   }
   if (!values.length) {
     return {...check, status: 'fail', detail: `no ${type} record published (${result.rcode}). Add it at your DNS host.`};
@@ -78,7 +78,7 @@ async function checkRecord(check, server, name, type, matches, describeMismatch)
 
 function checkA(site, settings) {
   const check = {id: 'dns-a', label: `A record for ${site.name}`};
-  if (!settings.publicIp) return {...check, status: 'warn', detail: 'set your public IP in Llar first'};
+  if (!settings.publicIp) return {...check, status: 'warn', detail: 'set your public IP in Castell first'};
   return checkRecord(check, settings.dnsServer, site.name, 'A',
     values => values.includes(settings.publicIp),
     values => `points to ${values.join(', ')}, not your public IP ${settings.publicIp}`);
@@ -97,7 +97,7 @@ function checkTlsa(site, tlsa, settings) {
 // isn't conclusive; a phone on mobile data is the real test.
 async function checkPublic(site, tlsa, settings) {
   const check = {id: 'public', label: 'Reachable on your public IP, port 443'};
-  if (!settings.publicIp) return {...check, status: 'warn', detail: 'set your public IP in Llar first'};
+  if (!settings.publicIp) return {...check, status: 'warn', detail: 'set your public IP in Castell first'};
   try {
     const served = await fetchServed(settings.publicIp, 443, site.name);
     if (served.tlsa !== tlsa) {

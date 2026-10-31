@@ -1,6 +1,6 @@
 'use strict';
 
-// Llar's data folder (/llar in the container, ~/umbrel/app-data/llar-sites/data on the Umbrel):
+// Castell's data folder (/castell in the container, ~/umbrel/app-data/castell-sites/data on the Umbrel):
 //   state.json            settings and the list of sites
 //   Caddyfile             generated from state.json, read by the Caddy container
 //   sites/<name>/         key.pem, cert-<time>.pem and site/ (the static files)
@@ -8,7 +8,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const DATA_DIR = process.env.LLAR_DATA || '/llar';
+const DATA_DIR = process.env.CASTELL_DATA || '/castell';
 const STATE_FILE = path.join(DATA_DIR, 'state.json');
 const SITES_DIR = path.join(DATA_DIR, 'sites');
 const TRASH_DIR = path.join(DATA_DIR, 'trash');

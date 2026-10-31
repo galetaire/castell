@@ -7,7 +7,7 @@ const {promisify} = require('util');
 const {UserError} = require('./errors');
 
 const run = promisify(execFile);
-const OPENSSL = process.env.LLAR_OPENSSL || 'openssl';
+const OPENSSL = process.env.CASTELL_OPENSSL || 'openssl';
 // Git Bash's openssl on Windows rewrites "/CN=..." into a file path; harmless elsewhere.
 const env = {...process.env, MSYS_NO_PATHCONV: '1'};
 const CERT_DAYS = 3650;
@@ -43,7 +43,7 @@ function normalizeKey(pem) {
     throw new UserError('That file is not a readable private key (PEM). Password-protected keys are not supported.');
   }
   if (!['ec', 'rsa'].includes(key.asymmetricKeyType)) {
-    throw new UserError(`Llar supports EC and RSA keys; this one is ${key.asymmetricKeyType}.`);
+    throw new UserError(`Castell supports EC and RSA keys; this one is ${key.asymmetricKeyType}.`);
   }
   return key.export({type: 'pkcs8', format: 'pem'});
 }

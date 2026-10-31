@@ -1,4 +1,4 @@
-name: Build Llar image
+name: Build Castell image
 
 on:
   workflow_dispatch:
@@ -6,7 +6,7 @@ on:
     branches: [main]
     paths:
       - "docker/**"
-      - "llar-sites/umbrel-app.yml"
+      - "castell-sites/umbrel-app.yml"
       - ".github/workflows/build-image.yml"
 
 permissions:
@@ -26,9 +26,9 @@ jobs:
         id: ver
         run: |
           # Image tag = the Umbrel app version, so every app release gets its own image
-          TAG=$(grep -oP '^version: "\K[^"]+' llar-sites/umbrel-app.yml)
+          TAG=$(grep -oP '^version: "\K[^"]+' castell-sites/umbrel-app.yml)
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-          echo "image=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/llar" >> "$GITHUB_OUTPUT"
+          echo "image=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/castell" >> "$GITHUB_OUTPUT"
 
   build:
     needs: resolve

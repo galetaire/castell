@@ -1,16 +1,19 @@
+/* Light is the default. The header toggle sets data-theme="dark" on <html>,
+   remembered in localStorage (see index.html and app.js). The accent is the
+   terracotta of the Castell icon. */
 :root {
-  --bg: #f6f4f0;
+  --bg: #f7f3ee;
   --card: #ffffff;
-  --text: #1d2330;
-  --muted: #5d6573;
-  --border: #e3dfd7;
-  --accent: #c85a28;
+  --text: #1f1d1a;
+  --muted: #625b53;
+  --border: #e6ddd3;
+  --accent: #9c5f30;
   --accent-text: #ffffff;
-  --accent-soft: #fbeee6;
-  --code-bg: #f1eee8;
+  --accent-soft: #f5ebe1;
+  --code-bg: #f2ece5;
   --ok: #1f7a4d;
   --ok-soft: #e4f4ec;
-  --warn: #9a6200;
+  --warn: #8a5800;
   --warn-soft: #fdf3dc;
   --fail: #b3261e;
   --fail-soft: #fbe6e4;
@@ -18,25 +21,23 @@
   color-scheme: light;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #11151c;
-    --card: #1a2029;
-    --text: #e7e9ee;
-    --muted: #9aa3b2;
-    --border: #2b333f;
-    --accent: #e8814f;
-    --accent-text: #1a1108;
-    --accent-soft: #3a2519;
-    --code-bg: #232a35;
-    --ok: #5fd39a;
-    --ok-soft: #173327;
-    --warn: #f0b84e;
-    --warn-soft: #3a2f16;
-    --fail: #ff8a80;
-    --fail-soft: #3d1d1b;
-    color-scheme: dark;
-  }
+:root[data-theme="dark"] {
+  --bg: #16130f;
+  --card: #201c17;
+  --text: #ece6df;
+  --muted: #a69c90;
+  --border: #352e26;
+  --accent: #d9a274;
+  --accent-text: #1f1409;
+  --accent-soft: #33271d;
+  --code-bg: #2a241e;
+  --ok: #5fd39a;
+  --ok-soft: #173327;
+  --warn: #f0b84e;
+  --warn-soft: #3a2f16;
+  --fail: #ff8a80;
+  --fail-soft: #3d1d1b;
+  color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
@@ -71,6 +72,7 @@ code { background: var(--code-bg); padding: .1em .35em; border-radius: 5px; }
 .brand img { border-radius: 9px; }
 .brand strong { display: block; font-size: 1.2rem; }
 .brand small { color: var(--muted); }
+.top-actions { display: flex; align-items: center; gap: .6rem; }
 
 main { max-width: 920px; margin: 0 auto; padding: .5rem 16px 4rem; }
 

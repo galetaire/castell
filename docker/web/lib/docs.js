@@ -1,6 +1,6 @@
 'use strict';
 
-// The per-site documents Llar offers for download, and the starter page.
+// The per-site documents Castell offers for download, and the starter page.
 
 const escapeHtml = text => String(text).replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
 
@@ -46,11 +46,11 @@ Notes
 function readme(site, tlsa, settings, hostPort) {
   const v = values(site, tlsa, settings, hostPort);
   const content = site.mode === 'proxy'
-    ? `Llar forwards requests for \`${v.name}\` to \`${site.upstream}\` (another app).`
-    : 'Static files, uploaded in the Llar app.';
+    ? `Castell forwards requests for \`${v.name}\` to \`${site.upstream}\` (another app).`
+    : 'Static files, uploaded in the Castell app.';
   return `# ${v.name}
 
-Hosted on Umbrel with **Llar**: HTTPS for a Handshake name, secured with **DANE**
+Hosted on Umbrel with **Castell**: HTTPS for a Handshake name, secured with **DANE**
 (a \`TLSA\` record) instead of a certificate authority. TLS ends on the Umbrel
 with this site's own key, so nothing in the middle can re-sign the connection.
 
@@ -76,7 +76,7 @@ Content: ${content}
 The name's records in the Handshake root must point at your DNS host: its \`NS\`
 records and the \`DS\` record it gives you.
 
-## Router (once for all Llar sites)
+## Router (once for all Castell sites)
 
 | Field | Value |
 |---|---|
@@ -91,15 +91,15 @@ the public port 443 onto it. Visitors still connect on 443, so the TLSA name sta
 
 ## Key
 
-The private key is in Llar's data folder on the Umbrel
-(\`~/umbrel/app-data/llar-sites/data/sites/${v.name}/key.pem\`). Keep a backup
-(Llar → the site → Download key). Uninstalling Llar deletes it, and a new key
-needs a new TLSA record. To move this site to a new Llar install, add the name
+The private key is in Castell's data folder on the Umbrel
+(\`~/umbrel/app-data/castell-sites/data/sites/${v.name}/key.pem\`). Keep a backup
+(Castell → the site → Download key). Uninstalling Castell deletes it, and a new key
+needs a new TLSA record. To move this site to a new Castell install, add the name
 again and choose the backed-up key.
 
 ## Checking
 
-- Llar → the site → **Verify** checks the served certificate, both DNS records
+- Castell → the site → **Verify** checks the served certificate, both DNS records
   and (when your router allows it) the public address.
 - From a phone on mobile data: \`curl -vk https://${v.publicIp}\` should show
   \`server: Caddy\` and a certificate for \`CN=${v.name}\`.
@@ -126,11 +126,11 @@ function starterPage(name) {
 </head>
 <body>
   <main>
-    <p class="tag">HANDSHAKE · DANE · HOSTED WITH LLAR</p>
+    <p class="tag">HANDSHAKE · DANE · HOSTED WITH CASTELL</p>
     <h1>${safe}/ works.</h1>
     <p>This page is served from a home server, over HTTPS validated by a TLSA
       record instead of a certificate authority.</p>
-    <p>Replace it by uploading your site in Llar.</p>
+    <p>Replace it by uploading your site in Castell.</p>
   </main>
 </body>
 </html>

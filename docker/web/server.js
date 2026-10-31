@@ -1,6 +1,6 @@
 'use strict';
 
-// Llar: hosts websites for Handshake names on Umbrel, with DANE.
+// Castell: hosts websites for Handshake names on Umbrel, with DANE.
 // This server is the app's web UI and API. It owns the data folder (keys,
 // certificates, site files) and writes the Caddyfile the Caddy container serves.
 const fs = require('fs');
@@ -21,10 +21,10 @@ const {UserError} = require('./lib/errors');
 
 const PORT = Number(process.env.PORT || 3000);
 // The host port Caddy is published on (docker-compose.yml), for the router instructions
-const HOST_PORT = Number(process.env.LLAR_HOST_PORT || 8443);
+const HOST_PORT = Number(process.env.CASTELL_HOST_PORT || 8443);
 // Where this container reaches Caddy, to check the certificate it serves
-const CADDY = {host: process.env.LLAR_CADDY_HOST || 'localhost', port: Number(process.env.LLAR_CADDY_PORT || 443)};
-const IP_SERVICE = process.env.LLAR_IP_SERVICE || 'https://api.ipify.org';
+const CADDY = {host: process.env.CASTELL_CADDY_HOST || 'localhost', port: Number(process.env.CASTELL_CADDY_PORT || 443)};
+const IP_SERVICE = process.env.CASTELL_IP_SERVICE || 'https://api.ipify.org';
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const MAX_JSON = 1024 * 1024;
 const MAX_FILE = 512 * 1024 * 1024;
@@ -69,7 +69,7 @@ const newCertName = () => `cert-${new Date().toISOString().replace(/\D/g, '').sl
 
 function findSite(current, name) {
   const site = current.sites.find(s => s.name === name);
-  if (!site) throw new UserError(`${name} is not in Llar.`);
+  if (!site) throw new UserError(`${name} is not in Castell.`);
   return site;
 }
 
@@ -97,9 +97,9 @@ async function createSite(body) {
 
   return state.withLock(async () => {
     const current = state.load();
-    if (current.sites.some(s => s.name === name)) throw new UserError(`${name} is already in Llar.`);
+    if (current.sites.some(s => s.name === name)) throw new UserError(`${name} is already in Castell.`);
     const dir = state.siteDir(name);
-    if (fs.existsSync(dir)) throw new UserError(`Llar's data folder already has files for ${name} (sites/${name}). Move them away first.`);
+    if (fs.existsSync(dir)) throw new UserError(`Castell's data folder already has files for ${name} (sites/${name}). Move them away first.`);
 
     const now = new Date().toISOString();
     const site = {name, mode, upstream, keyImported: !!importedKey, createdAt: now, certFile: newCertName()};
@@ -187,7 +187,7 @@ async function listFiles(root, base = '', out = []) {
 // Streams the request body to disk (through a temporary file) with a size limit.
 async function saveUpload(req, dest) {
   await fsp.mkdir(path.dirname(dest), {recursive: true});
-  const tmp = `${dest}.llar-upload`;
+  const tmp = `${dest}.castell-upload`;
   try {
     await new Promise((resolve, reject) => {
       let size = 0;
@@ -277,7 +277,7 @@ function sendDownload(res, filename, type, data) {
   res.end(data);
 }
 
-const STATIC_TYPES = {'.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml'};
+const STATIC_TYPES = {'.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.jpeg': 'image/jpeg'};
 
 async function serveStatic(res, pathname) {
   const file = path.join(PUBLIC_DIR, pathname === '/' ? 'index.html' : pathname);
@@ -395,8 +395,8 @@ const server = http.createServer(async (req, res) => {
   }
 
   // Changes need a header a cross-site form or image can't send, so another
-  // website open in the same browser can't act on Llar through the Umbrel login.
-  if (req.method !== 'GET' && req.headers['x-llar'] !== '1') return sendJson(res, 403, {error: 'Missing X-Llar header'});
+  // website open in the same browser can't act on Castell through the Umbrel login.
+  if (req.method !== 'GET' && req.headers['x-castell'] !== '1') return sendJson(res, 403, {error: 'Missing X-Castell header'});
 
   for (const {method, pattern, handler} of routes) {
     const match = method === req.method && pattern.exec(pathname);
@@ -409,7 +409,7 @@ const server = http.createServer(async (req, res) => {
       if (!res.headersSent) sendJson(res, 200, result);
     } catch (e) {
       if (e instanceof UserError) return sendJson(res, 400, {error: e.message});
-      console.error(`[Llar] ${req.method} ${pathname}:`, e);
+      console.error(`[Castell] ${req.method} ${pathname}:`, e);
       return sendJson(res, 500, {error: e.message});
     }
     return;
@@ -418,10 +418,10 @@ const server = http.createServer(async (req, res) => {
 });
 
 fs.mkdirSync(state.SITES_DIR, {recursive: true});
-// Always rewrite the Caddyfile on start, so a new Llar version's config takes effect
+// Always rewrite the Caddyfile on start, so a new Castell version's config takes effect
 caddy.write(state.load().sites);
 
 server.listen(PORT, () => {
-  console.log(`[Llar] Listening on port ${PORT}. Data folder: ${state.DATA_DIR}`);
-  console.log(`[Llar] ${source.describe()}`);
+  console.log(`[Castell] Listening on port ${PORT}. Data folder: ${state.DATA_DIR}`);
+  console.log(`[Castell] ${source.describe()}`);
 });

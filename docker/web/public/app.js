@@ -1,6 +1,6 @@
 'use strict';
 
-// Llar's web UI: plain JavaScript, rendered from the /api/state snapshot.
+// Castell's web UI: plain JavaScript, rendered from the /api/state snapshot.
 const app = document.getElementById('app');
 let data = null;
 const verifyResults = {};
@@ -11,7 +11,7 @@ const esc = text => String(text ?? '').replace(/[&<>"']/g, c => `&#${c.charCodeA
 const IPV4_RE = /^\d{1,3}(\.\d{1,3}){3}$/;
 
 async function api(method, url, body, rawBody = false) {
-  const options = {method, headers: {'X-Llar': '1'}};
+  const options = {method, headers: {'X-Castell': '1'}};
   if (body !== undefined) {
     if (rawBody) {
       options.body = body;
@@ -117,7 +117,7 @@ function routerTable() {
 
 function renderHome() {
   const {settings, sites} = data;
-  // The browser reached Llar through the Umbrel's LAN address: a good guess for the router rule
+  // The browser reached Castell through the Umbrel's LAN address: a good guess for the router rule
   const suggestedLan = !settings.lanIp && IPV4_RE.test(location.hostname) ? location.hostname : '';
 
   app.innerHTML = `
@@ -193,7 +193,7 @@ function renderHome() {
       <h2>Router: one rule for all sites</h2>
       <p>Add this port forward in your router (often under <em>Port forwarding</em>, <em>Virtual server</em> or <em>NAT</em>):</p>
       ${routerTable()}
-      <p class="muted small">umbrelOS uses port 443 itself, so Llar listens on ${data.hostPort}. Visitors still connect on 443; the router maps it.
+      <p class="muted small">umbrelOS uses port 443 itself, so Castell listens on ${data.hostPort}. Visitors still connect on 443; the router maps it.
         Leave any "remote host" field empty, and enable the rule after saving.</p>
     </section>`;
 
@@ -301,7 +301,7 @@ function renderSite(site) {
 
     <div class="callout warn">
       <strong>Back up this site's key</strong>
-      Your TLSA record is tied to this key. If you uninstall Llar or lose the Umbrel, the key is gone and you'd need a new TLSA record.
+      Your TLSA record is tied to this key. If you uninstall Castell or lose the Umbrel, the key is gone and you'd need a new TLSA record.
       <div class="actions" style="margin-top:.5rem"><a class="button small" href="${siteUrl(name)}/download/key" download>Download key.pem</a></div>
     </div>
 
@@ -331,7 +331,7 @@ function renderSite(site) {
       <span class="step-num">3</span>
       <div class="step-body">
         <h2>Router</h2>
-        <p>The same rule serves every Llar site. If it's set up already, nothing to do:</p>
+        <p>The same rule serves every Castell site. If it's set up already, nothing to do:</p>
         ${routerTable()}
       </div>
     </section>
@@ -414,7 +414,7 @@ function renderSite(site) {
   });
 
   document.getElementById('remove').onclick = event => {
-    if (!confirm(`Remove ${name}/ from Llar?\n\nIt stops being served. Its key and files are moved to the "trash" folder in Llar's data on the Umbrel, not deleted.`)) return;
+    if (!confirm(`Remove ${name}/ from Castell?\n\nIt stops being served. Its key and files are moved to the "trash" folder in Castell's data on the Umbrel, not deleted.`)) return;
     busy(event.currentTarget, async () => {
       await api('DELETE', siteUrl(name));
       await refresh();
@@ -466,9 +466,33 @@ async function upload(name, input, isFolder) {
   loadFiles(name);
 }
 
+// ---------- theme ----------
+
+// Light by default; the choice is remembered in this browser (index.html applies it before drawing)
+const themeToggle = document.getElementById('theme-toggle');
+
+function showTheme() {
+  const dark = document.documentElement.dataset.theme === 'dark';
+  themeToggle.textContent = dark ? '☀ Light' : '☾ Dark';
+  themeToggle.setAttribute('aria-label', dark ? 'Switch to light mode' : 'Switch to dark mode');
+}
+
+themeToggle.onclick = () => {
+  const dark = document.documentElement.dataset.theme !== 'dark';
+  if (dark) document.documentElement.dataset.theme = 'dark';
+  else delete document.documentElement.dataset.theme;
+  try {
+    localStorage.setItem('castell-theme', dark ? 'dark' : 'light');
+  } catch (e) {
+    // private window or blocked storage: the choice lasts until the page closes
+  }
+  showTheme();
+};
+
 // ---------- start ----------
 
+showTheme();
 window.addEventListener('hashchange', route);
 refresh().then(route).catch(e => {
-  app.innerHTML = `<div class="callout warn"><strong>Llar could not load</strong>${esc(e.message)}</div>`;
+  app.innerHTML = `<div class="callout warn"><strong>Castell could not load</strong>${esc(e.message)}</div>`;
 });

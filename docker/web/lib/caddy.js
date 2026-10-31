@@ -1,16 +1,16 @@
 'use strict';
 
-// Llar owns the Caddyfile. The Caddy container runs with --watch, so it reloads
+// Castell owns the Caddyfile. The Caddy container runs with --watch, so it reloads
 // a second or two after this file changes; an invalid file keeps the old config.
 const path = require('path');
 const state = require('./state');
 
 // The data folder as mounted in the Caddy container
-const CADDY_DATA = process.env.LLAR_CADDY_DATA || '/llar';
+const CADDY_DATA = process.env.CASTELL_CADDY_DATA || '/castell';
 
 function render(sites) {
   const lines = [
-    '# Written by Llar. Edits here are overwritten; change your sites in the Llar app.',
+    '# Written by Castell. Edits here are overwritten; change your sites in the Castell app.',
     '{',
     // Certificates are our own (DANE), never from a CA
     '\tauto_https off',

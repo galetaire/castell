@@ -1,21 +1,21 @@
 'use strict';
 
 // Only accept requests that came through Umbrel, so other apps on the same
-// Umbrel can't reach Llar (and the site keys) directly and skip the Umbrel login:
+// Umbrel can't reach Castell (and the site keys) directly and skip the Umbrel login:
 // - umbrelOS's app gateway, which reaches this container from the default
 //   route's gateway address (Tor remote access goes through it too);
 // - older umbrelOS versions run an app_proxy container for this app instead
-//   (LLAR_PROXY_HOST, for example llar-sites_app_proxy_1);
+//   (CASTELL_PROXY_HOST, for example castell-sites_app_proxy_1);
 // - loopback, for anything inside this container.
-// LLAR_TRUSTED_IPS adds addresses; LLAR_ALLOW_ANY_SOURCE=true turns the
+// CASTELL_TRUSTED_IPS adds addresses; CASTELL_ALLOW_ANY_SOURCE=true turns the
 // check off, for setups that route traffic some other way.
 const dns = require('dns');
 const fs = require('fs');
 
-const ALLOW_ANY_SOURCE = process.env.LLAR_ALLOW_ANY_SOURCE === 'true';
-const PROXY_HOST = process.env.LLAR_PROXY_HOST || '';
+const ALLOW_ANY_SOURCE = process.env.CASTELL_ALLOW_ANY_SOURCE === 'true';
+const PROXY_HOST = process.env.CASTELL_PROXY_HOST || '';
 const staticTrusted = new Set(['127.0.0.1', '::1']);
-for (const ip of (process.env.LLAR_TRUSTED_IPS || '').split(',')) {
+for (const ip of (process.env.CASTELL_TRUSTED_IPS || '').split(',')) {
   if (ip.trim()) staticTrusted.add(ip.trim());
 }
 
@@ -66,15 +66,15 @@ async function isTrustedSource(remoteAddress) {
   }
   if (!rejectedLogged.has(ip)) {
     rejectedLogged.add(ip);
-    console.warn(`[Llar] Refused a connection from ${ip}: it did not come through Umbrel. ` +
-      'Set LLAR_TRUSTED_IPS or LLAR_ALLOW_ANY_SOURCE=true if this is expected.');
+    console.warn(`[Castell] Refused a connection from ${ip}: it did not come through Umbrel. ` +
+      'Set CASTELL_TRUSTED_IPS or CASTELL_ALLOW_ANY_SOURCE=true if this is expected.');
   }
   return false;
 }
 
 function describe() {
   return ALLOW_ANY_SOURCE
-    ? 'Source check is off (LLAR_ALLOW_ANY_SOURCE=true).'
+    ? 'Source check is off (CASTELL_ALLOW_ANY_SOURCE=true).'
     : `Accepting connections from: ${[...staticTrusted].join(', ')}${PROXY_HOST ? `, ${PROXY_HOST}` : ''}`;
 }
 

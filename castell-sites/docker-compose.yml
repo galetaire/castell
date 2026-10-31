@@ -4,24 +4,24 @@ services:
   app_proxy:
     environment:
       # The format here is: <app-id>_<docker-service-name>_1
-      APP_HOST: llar-sites_web_1
+      APP_HOST: castell-sites_web_1
       APP_PORT: 3000
 
   web:
-    image: ghcr.io/galetaire/llar:0.1.0
+    image: ghcr.io/galetaire/castell:0.1.0
     restart: on-failure
     environment:
       - TZ=Etc/UTC
       # Only accept connections routed by Umbrel (see docker/web/lib/source.js).
       # Older umbrelOS versions route through this app_proxy container.
-      - LLAR_PROXY_HOST=llar-sites_app_proxy_1
+      - CASTELL_PROXY_HOST=castell-sites_app_proxy_1
       # Where the web app reaches Caddy to check the certificate it serves
-      - LLAR_CADDY_HOST=llar-sites_caddy_1
+      - CASTELL_CADDY_HOST=castell-sites_caddy_1
       # The host port Caddy is published on below, shown in the router instructions
-      - LLAR_HOST_PORT=8443
+      - CASTELL_HOST_PORT=8443
     volumes:
       # Keys, certificates, site files and the Caddyfile
-      - ${APP_DATA_DIR}/data:/llar
+      - ${APP_DATA_DIR}/data:/castell
 
   caddy:
     image: caddy:2.10.2
@@ -31,9 +31,9 @@ services:
       # Forward external TCP 443 on your router to <Umbrel LAN IP>:8443.
       - "8443:443"
     volumes:
-      - ${APP_DATA_DIR}/data:/llar:ro
+      - ${APP_DATA_DIR}/data:/castell:ro
       - ${APP_DATA_DIR}/caddy:/data
     entrypoint: ["/bin/sh", "-c"]
     # Wait for the web app to write the first Caddyfile, then reload whenever it changes
     command:
-      - until [ -f /llar/Caddyfile ]; do sleep 1; done; exec caddy run --config /llar/Caddyfile --adapter caddyfile --watch
+      - until [ -f /castell/Caddyfile ]; do sleep 1; done; exec caddy run --config /castell/Caddyfile --adapter caddyfile --watch
