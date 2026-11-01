@@ -388,6 +388,7 @@ function renderAdd() {
     proxy: {
       title: 'Before you put another app online',
       items: [
+        'Do NOT use this option unless you fully understand the implications. A static site is the safer option.',
         'The app becomes reachable by anyone on the internet, not only people on your network.',
         'Only forward apps that have their own login, and keep them updated. A flaw in the app can expose your Umbrel and your network.',
         'Never forward admin panels, wallets or apps that hold private data.',
