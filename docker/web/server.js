@@ -277,7 +277,7 @@ function sendDownload(res, filename, type, data) {
   res.end(data);
 }
 
-const STATIC_TYPES = {'.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.jpeg': 'image/jpeg', '.woff2': 'font/woff2'};
+const STATIC_TYPES = {'.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.woff2': 'font/woff2'};
 
 async function serveStatic(res, pathname) {
   const file = path.join(PUBLIC_DIR, pathname === '/' ? 'index.html' : pathname);

@@ -2,9 +2,9 @@ manifestVersion: 1
 id: castell-sites
 name: Castell
 tagline: Host your Handshake websites on your Umbrel, secured with DANE
-icon: https://raw.githubusercontent.com/galetaire/castell/main/castell-sites/castell.jpeg
+icon: https://raw.githubusercontent.com/galetaire/castell/main/castell-sites/castell.png
 category: networking
-version: "0.2.1"
+version: "0.2.2"
 port: 4747
 description: >-
   Castell ("castle" in Catalan) hosts websites for your Handshake (HNS) names on
@@ -39,9 +39,7 @@ repo: https://github.com/galetaire/castell
 support: https://github.com/galetaire/castell/issues
 gallery: []
 releaseNotes: >-
-  Adding a site now explains the risks of each option before you publish:
-  what a static website makes public, and what to keep in mind before
-  putting another app online.
+  A new, sharper Castell logo, in the App Store and in the app.
 dependencies: []
 path: ""
 defaultUsername: ""
