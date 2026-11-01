@@ -338,6 +338,7 @@ function renderAdd() {
             <span class="hint">Where the app listens, as host:port, e.g. <code>${esc(settings.lanIp || '192.168.1.27')}:3000</code>.</span>
             <input type="text" id="add-upstream-input" autocomplete="off" spellcheck="false" placeholder="${esc(settings.lanIp || '192.168.1.27')}:3000" style="max-width: 440px">
           </div>
+          <div class="risk-box" id="add-risk" role="status" aria-live="polite"></div>
         </fieldset>
 
         <div>
@@ -375,9 +376,35 @@ function renderAdd() {
     const name = nameInput.value.trim().replace(/\/+$/, '');
     submit.textContent = name ? `Add ${name}/` : 'Add site';
   };
+  const RISKS = {
+    static: {
+      title: 'Before you publish a static website',
+      items: [
+        'Every file in the folder becomes public. Anyone who knows the name can download it, even files no page links to.',
+        'Leave out private files: notes, backups, <code>.env</code> files, passwords or personal documents.',
+        'Forwarding the router port opens your Umbrel to the internet, not just to this site.',
+      ],
+    },
+    proxy: {
+      title: 'Before you put another app online',
+      items: [
+        'The app becomes reachable by anyone on the internet, not only people on your network.',
+        'Only forward apps that have their own login, and keep them updated. A flaw in the app can expose your Umbrel and your network.',
+        'Never forward admin panels, wallets or apps that hold private data.',
+      ],
+    },
+  };
+  const riskBox = document.getElementById('add-risk');
+  const showRisk = mode => {
+    const risk = RISKS[mode];
+    riskBox.innerHTML = `<span class="risk-icon">${icon('alert')}</span>
+      <div><strong>${risk.title}</strong><ul>${risk.items.map(item => `<li>${item}</li>`).join('')}</ul></div>`;
+  };
+  showRisk(app.querySelector('input[name="mode"]:checked').value);
   for (const radio of app.querySelectorAll('input[name="mode"]')) {
     radio.onchange = () => {
       document.getElementById('add-upstream').hidden = radio.value !== 'proxy' || !radio.checked;
+      if (radio.checked) showRisk(radio.value);
     };
   }
   const keyInput = document.getElementById('add-key');

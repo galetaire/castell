@@ -270,6 +270,11 @@ legend { font-weight: 600; font-size: 16px; padding: 0; margin-bottom: 10px; }
 .option:has(input:checked) .option-icon { background: var(--card); color: var(--accent); }
 .option input { width: 18px; height: 18px; accent-color: var(--accent); margin: 0; }
 .option span.desc { color: var(--muted); font-size: 14px; }
+.risk-box { display: flex; gap: 12px; margin-top: 16px; padding: 14px 16px; border: 1px solid var(--fail-border); border-left-width: 1px; border-radius: 12px; background: var(--fail-soft); color: var(--text); font-size: 14px; }
+.risk-box:empty { display: none; }
+.risk-icon { flex: none; width: 32px; height: 32px; border-radius: 8px; display: grid; place-items: center; background: var(--fail-strong); color: #fff; }
+.risk-box strong { display: block; color: var(--fail); font-size: 15px; margin: 4px 0 6px; }
+.risk-box ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
 
 .file-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 14px; border-radius: 10px; background: var(--subtle); }
 
