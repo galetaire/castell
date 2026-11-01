@@ -1,6 +1,6 @@
 {
   "name": "castell",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": true,
   "description": "Host websites for Handshake names on Umbrel, secured with DANE",
   "main": "server.js",
