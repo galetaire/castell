@@ -382,7 +382,7 @@ function renderAdd() {
       items: [
         'Every file in the folder becomes public. Anyone who knows the name can download it, even files no page links to.',
         'Leave out private files: notes, backups, <code>.env</code> files, passwords or personal documents.',
-        'Forwarding the router port opens your Umbrel to the internet, not just to this site.',
+        'Publishing the site makes your home IP public (it is in the A record), and the router forward makes Castell\'s web server reachable from the internet.',
       ],
     },
     proxy: {
