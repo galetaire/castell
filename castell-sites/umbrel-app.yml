@@ -37,7 +37,10 @@ submitter: galetaire
 submission: https://github.com/galetaire/castell
 repo: https://github.com/galetaire/castell
 support: https://github.com/galetaire/castell/issues
-gallery: []
+gallery:
+  - https://raw.githubusercontent.com/galetaire/castell/main/castell-sites/gallery/1.png
+  - https://raw.githubusercontent.com/galetaire/castell/main/castell-sites/gallery/2.png
+  - https://raw.githubusercontent.com/galetaire/castell/main/castell-sites/gallery/3.png
 releaseNotes: >-
   A clearer warning when adding a site that forwards another app: use it only
   if you fully understand the implications, since a static site is the safer
