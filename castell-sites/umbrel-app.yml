@@ -1,13 +1,13 @@
 manifestVersion: 1
 id: castell-sites
 name: Castell
-tagline: Host your Handshake websites on your Umbrel, secured with DANE
+tagline: Host your Handshake websites secured with DANE
 icon: https://raw.githubusercontent.com/galetaire/castell/main/castell-sites/castell.png
 category: networking
 version: "0.3.0"
 port: 4747
 description: >-
-  Castell ("castle" in Catalan) hosts websites for your Handshake (HNS) names on
+  Castell hosts websites for your Handshake (HNS) names on
   your own Umbrel, over HTTPS secured with DANE instead of a certificate
   authority.
 
