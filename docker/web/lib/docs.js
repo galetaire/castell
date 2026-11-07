@@ -7,7 +7,8 @@ const escapeHtml = text => String(text).replace(/[&<>"']/g, c => `&#${c.charCode
 function values(site, tlsa, settings, hostPort) {
   return {
     name: site.name,
-    publicIp: settings.publicIp || '<your public IP>',
+    vps: settings.reach === 'vps',
+    publicIp: settings.publicIp || (settings.reach === 'vps' ? '<your VPS IP>' : '<your public IP>'),
     lanIp: settings.lanIp || '<Umbrel LAN IP>',
     tlsa: `3 1 1 ${tlsa}`,
     hostPort,
@@ -21,7 +22,7 @@ ${'='.repeat(17 + v.name.length)}
 
 Publish both at your DNS host (the authoritative, DNSSEC-signed zone, e.g. Yeil).
 
-1) A record: points the name at your home connection
+1) A record: points the name at your ${v.vps ? 'VPS' : 'home connection'}
    Name:   @            (i.e. ${v.name})
    Type:   A
    Value:  ${v.publicIp}
@@ -37,9 +38,38 @@ Notes
   key keeps this record valid; only a new key needs a new TLSA record.
 - Publish the TLSA record and let it propagate BEFORE pointing anyone at the
   site, so the first TLS handshake validates.
-- If your public IP changes, update only the A record.
+- If your ${v.vps ? 'VPS' : 'public'} IP changes, update only the A record.
 - The name must be delegated to your DNS host in the Handshake root (NS + DS
   records, set once in Bob Wallet).
+`;
+}
+
+function routerSection(v) {
+  return `## Router (once for all Castell sites)
+
+| Field | Value |
+|---|---|
+| Protocol | TCP |
+| External port | \`443\` |
+| Internal IP | \`${v.lanIp}\` (reserve it in the router's DHCP settings) |
+| Internal port | \`${v.hostPort}\` |
+
+umbrelOS uses port 443 itself, so Caddy listens on ${v.hostPort}; the router maps
+the public port 443 onto it. Visitors still connect on 443, so the TLSA name stays
+\`_443._tcp.${v.name}\`.
+`;
+}
+
+function vpsSection(v) {
+  return `## VPS (once for all Castell sites)
+
+The VPS at \`${v.publicIp}\` passes TCP port 443 through a tunnel to port
+\`${v.hostPort}\` on this Umbrel, without decrypting it. Your router forwards nothing.
+
+- The proxy must work at the TCP level (for example HAProxy in TCP mode), so TLS
+  still ends here with this site's key. The VPS can't read the traffic, and it
+  can't impersonate the site, because it doesn't have the key.
+- Only allow the VPS to reach port \`${v.hostPort}\` of this Umbrel.
 `;
 }
 
@@ -59,7 +89,9 @@ Visitor (DANE-capable Handshake resolver)
    |  ${v.name} -> ${v.publicIp}             (A record)
    |  _443._tcp.${v.name} -> ${v.tlsa.slice(0, 22)}...   (TLSA record)
    v
-Router :443  --forward-->  Umbrel ${v.lanIp}:${v.hostPort}  -->  Caddy  -->  site
+${v.vps
+    ? `VPS ${v.publicIp}:443  --tunnel, TCP only-->  Umbrel :${v.hostPort}  -->  Caddy  -->  site`
+    : `Router :443  --forward-->  Umbrel ${v.lanIp}:${v.hostPort}  -->  Caddy  -->  site`}
 \`\`\`
 
 Content: ${content}
@@ -76,19 +108,7 @@ Content: ${content}
 The name's records in the Handshake root must point at your DNS host: its \`NS\`
 records and the \`DS\` record it gives you.
 
-## Router (once for all Castell sites)
-
-| Field | Value |
-|---|---|
-| Protocol | TCP |
-| External port | \`443\` |
-| Internal IP | \`${v.lanIp}\` (reserve it in the router's DHCP settings) |
-| Internal port | \`${v.hostPort}\` |
-
-umbrelOS uses port 443 itself, so Caddy listens on ${v.hostPort}; the router maps
-the public port 443 onto it. Visitors still connect on 443, so the TLSA name stays
-\`_443._tcp.${v.name}\`.
-
+${v.vps ? vpsSection(v) : routerSection(v)}
 ## Key
 
 The private key is in Castell's data folder on the Umbrel
@@ -99,8 +119,8 @@ again and choose the backed-up key.
 
 ## Checking
 
-- Castell → the site → **Verify** checks the served certificate, both DNS records
-  and (when your router allows it) the public address.
+- Castell → the site → **Run checks** covers the served certificate, both DNS
+  records and ${v.vps ? 'the route through the VPS' : '(when your router allows it) the public address'}.
 - From a phone on mobile data: \`curl -vk https://${v.publicIp}\` should show
   \`server: Caddy\` and a certificate for \`CN=${v.name}\`.
 - Open the site in a DANE-capable client (Fingertip, letsdane).

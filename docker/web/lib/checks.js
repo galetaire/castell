@@ -78,10 +78,11 @@ async function checkRecord(check, server, name, type, matches, describeMismatch)
 
 function checkA(site, settings) {
   const check = {id: 'dns-a', label: `A record for ${site.name}`};
-  if (!settings.publicIp) return {...check, status: 'warn', detail: 'set your public IP in Castell first'};
+  const ipName = settings.reach === 'vps' ? 'VPS IP' : 'public IP';
+  if (!settings.publicIp) return {...check, status: 'warn', detail: `set your ${ipName} in Castell first`};
   return checkRecord(check, settings.dnsServer, site.name, 'A',
     values => values.includes(settings.publicIp),
-    values => `points to ${values.join(', ')}, not your public IP ${settings.publicIp}`);
+    values => `points to ${values.join(', ')}, not your ${ipName} ${settings.publicIp}`);
 }
 
 function checkTlsa(site, tlsa, settings) {
@@ -92,23 +93,32 @@ function checkTlsa(site, tlsa, settings) {
     values => `found ${values.join(', ')}, but this site's key needs ${expected}`);
 }
 
-// Through the public IP, as a visitor would arrive. Many routers can't loop a
-// connection from inside the network back in ("NAT loopback"), so a failure here
-// isn't conclusive; a phone on mobile data is the real test.
+// Through the public address, as a visitor would arrive. Many routers can't loop
+// a connection from inside the network back in ("NAT loopback"), so with a port
+// forward a failure here isn't conclusive; a phone on mobile data is the real test.
+// A VPS is outside the network, so with one a failure is a real failure.
 async function checkPublic(site, tlsa, settings) {
-  const check = {id: 'public', label: 'Reachable on your public IP, port 443'};
-  if (!settings.publicIp) return {...check, status: 'warn', detail: 'set your public IP in Castell first'};
+  const vps = settings.reach === 'vps';
+  const check = {id: 'public', label: vps ? 'Reachable through your VPS, port 443' : 'Reachable on your public IP, port 443'};
+  if (!settings.publicIp) return {...check, status: 'warn', detail: `set your ${vps ? 'VPS' : 'public'} IP in Castell first`};
   try {
     const served = await fetchServed(settings.publicIp, 443, site.name);
     if (served.tlsa !== tlsa) {
       return {
         ...check, status: 'fail',
-        detail: `${settings.publicIp}:443 answers with a different certificate (issued by ${served.issuer}). ` +
-          'Check that the router forwards to this Umbrel\'s port 8443, and that no proxy sits in between.',
+        detail: `${settings.publicIp}:443 answers with a different certificate (issued by ${served.issuer}). ` + (vps
+          ? "The VPS must pass TCP through to this Umbrel's port 8443 without decrypting it."
+          : "Check that the router forwards to this Umbrel's port 8443, and that no proxy sits in between."),
       };
     }
     return {...check, status: 'ok', detail: `${settings.publicIp}:443 answers with your certificate (HTTP ${served.status})`};
   } catch (e) {
+    if (vps) {
+      return {
+        ...check, status: 'fail',
+        detail: `no answer from ${settings.publicIp}:443 (${errorText(e)}). Check that the proxy is running on the VPS and that the tunnel to this Umbrel is connected.`,
+      };
+    }
     return {
       ...check, status: 'warn',
       detail: `no answer from inside your network (${errorText(e)}). Your router may not support NAT loopback, so test from a phone on mobile data.`,

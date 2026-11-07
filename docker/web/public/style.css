@@ -412,3 +412,5 @@ details.more p { font-size: 14px; }
   box-shadow: 0 6px 24px rgba(0,0,0,.25);
 }
 .toast.error { background: var(--fail-strong); color: #fff; }
+
+[hidden] { display: none !important; }

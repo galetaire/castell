@@ -14,6 +14,9 @@ const SITES_DIR = path.join(DATA_DIR, 'sites');
 const TRASH_DIR = path.join(DATA_DIR, 'trash');
 
 const DEFAULT_SETTINGS = {
+  // How visitors reach this Umbrel: 'router' (a port forward) or 'vps' (a VPS
+  // passing TCP through a tunnel, so publicIp is the VPS's address, not the home's)
+  reach: 'router',
   publicIp: '',
   lanIp: '',
   // Where the DNS checks look: a nameserver of your DNS host (authoritative for

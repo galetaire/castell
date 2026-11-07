@@ -23,6 +23,7 @@ const ICONS = {
   copy: '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/>',
   folder: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
   forward: '<path d="M5 12h14M13 6l6 6-6 6"/>',
+  globe: '<circle cx="12" cy="12" r="8"/><path d="M4 12h16M12 4c2.5 2.5 2.5 13.5 0 16M12 4c-2.5 2.5-2.5 13.5 0 16"/>',
   arrow: '<path d="M4 12h16M14 6l6 6-6 6"/>',
   key: '<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3M15 8l2 2"/>',
   moon: '<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>',
@@ -97,6 +98,9 @@ const formatDate = iso => new Date(iso).toLocaleDateString(undefined, {year: 'nu
 const siteUrl = name => `api/sites/${encodeURIComponent(name)}`;
 const sitePath = name => `#/site/${encodeURIComponent(name)}`;
 const lanIp = () => data.settings.lanIp || '<Umbrel LAN IP>';
+const viaVps = () => data.settings.reach === 'vps';
+// What publicIp is called: the home's address, or the VPS's in front of it
+const ipName = () => (viaVps() ? 'VPS IP' : 'public IP');
 const capitalize = text => text.charAt(0).toUpperCase() + text.slice(1);
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
@@ -234,7 +238,7 @@ function renderOverview() {
       <section class="card banner">
         <span class="banner-icon info">${icon('info')}</span>
         <div class="banner-body"><h2>Finish the one-time setup</h2>
-          <p>Set your public IP and add the router rule, so your sites can be reached.</p></div>
+          <p>${viaVps() ? 'Set your VPS IP' : 'Set your public IP and add the router rule'}, so your sites can be reached.</p></div>
         <a class="button ink" href="#/settings">Set up</a>
       </section>`);
   }
@@ -288,8 +292,10 @@ function renderOverview() {
     <section class="card" aria-labelledby="setup-h">
       <div class="card-head"><h2 id="setup-h" style="font-size: 16px">Shared setup</h2><a href="#/settings" style="font-weight: 600; font-size: 14px">Edit</a></div>
       <dl class="facts">
-        <div><dt>Public IP</dt><dd>${esc(settings.publicIp || 'Not set')}</dd></div>
-        <div><dt>Router rule</dt><dd>443 → ${esc(lanIp())}:${data.hostPort}</dd></div>
+        <div><dt>${viaVps() ? 'VPS IP' : 'Public IP'}</dt><dd>${esc(settings.publicIp || 'Not set')}</dd></div>
+        ${viaVps()
+          ? `<div><dt>Route</dt><dd>VPS 443 → tunnel → :${data.hostPort}</dd></div>`
+          : `<div><dt>Router rule</dt><dd>443 → ${esc(lanIp())}:${data.hostPort}</dd></div>`}
         <div><dt>Checks ask</dt><dd>${esc(settings.dnsServer)}</dd></div>
       </dl>
     </section>
@@ -365,7 +371,7 @@ function renderAdd() {
           <li><span class="n">3</span><span>Sets up Caddy to serve the name</span></li>
           <li><span class="n">4</span><span>Shows the A and TLSA records to publish at your DNS host</span></li>
         </ol>
-        <p class="foot">You’ll still publish the records, delegate the name in Bob Wallet, and forward the router port yourself.</p>
+        <p class="foot">You’ll still publish the records and delegate the name in Bob Wallet${viaVps() ? '' : ', and forward the router port'} yourself.</p>
       </aside>
     </div>
   </div>`;
@@ -382,7 +388,9 @@ function renderAdd() {
       items: [
         'Every file in the folder becomes public. Anyone who knows the name can download it, even files no page links to.',
         'Leave out private files: notes, backups, <code>.env</code> files, passwords or personal documents.',
-        'Publishing the site makes your home IP public (it is in the A record), and the router forward makes Castell\'s web server reachable from the internet.',
+        viaVps()
+          ? 'The A record shows your VPS, not your home, and anyone can reach Castell\'s web server through it.'
+          : 'Publishing the site makes your home IP public (it is in the A record), and the router forward makes Castell\'s web server reachable from the internet.',
       ],
     },
     proxy: {
@@ -440,13 +448,13 @@ function renderAdd() {
   nameInput.focus();
 }
 
-// ---------- connection and router ----------
+// ---------- connection ----------
 
-function routerStatus() {
+function routeStatus() {
   const results = data.sites.map(s => siteStatus(s.name).checks.find(c => c.id === 'public')).filter(Boolean);
   if (results.some(c => c.status === 'ok')) return {cls: 'ok', icon: 'check', text: 'Working: a site answered on 443'};
-  if (results.some(c => c.status === 'fail')) return {cls: 'fail', icon: 'x', text: 'Another device answers on 443'};
-  if (results.length) return {cls: 'warn', icon: 'bang', text: 'Not confirmed from inside your network'};
+  if (results.some(c => c.status === 'fail')) return {cls: 'fail', icon: 'x', text: viaVps() ? 'Not reaching this Umbrel' : 'Another device answers on 443'};
+  if (results.length) return {cls: 'warn', icon: 'bang', text: viaVps() ? 'Set your VPS IP' : 'Not confirmed from inside your network'};
   return {cls: 'idle', icon: 'info', text: 'Not tested yet'};
 }
 
@@ -455,21 +463,41 @@ function renderSettings() {
   const {settings} = data;
   // The browser reached Castell through the Umbrel's LAN address: a good guess for the router rule
   const suggestedLan = !settings.lanIp && IPV4_RE.test(location.hostname) ? location.hostname : '';
-  const router = routerStatus();
+  const route = routeStatus();
+  const vps = viaVps();
 
   app.innerHTML = `<div class="page">
-    <div class="page-head"><div><h1>Connection &amp; router</h1><p>Set once. Every site uses these.</p></div></div>
+    <div class="page-head"><div><h1>Connection</h1><p>Set once. Every site uses these.</p></div></div>
 
     <form id="settings-form" class="page" style="gap: 22px">
+      <section class="card">
+        <fieldset>
+          <legend>How visitors reach this Umbrel</legend>
+          <div class="options">
+            <label class="option">
+              <span class="option-top"><span class="option-icon">${icon('globe')}</span><input type="radio" name="reach" value="router"${vps ? '' : ' checked'}></span>
+              <strong>Router port forward</strong>
+              <span class="desc">Visitors connect to your home directly. Simple, but your home IP is public.</span>
+            </label>
+            <label class="option">
+              <span class="option-top"><span class="option-icon">${icon('forward')}</span><input type="radio" name="reach" value="vps"${vps ? ' checked' : ''}></span>
+              <strong>VPS tunnel</strong>
+              <span class="desc">A VPS passes traffic to this Umbrel. Your home IP stays private and your router forwards nothing.</span>
+            </label>
+          </div>
+        </fieldset>
+      </section>
+
       <section class="card" aria-labelledby="net-h">
         <h2 id="net-h" style="margin-bottom: 16px">Your connection</h2>
         <div class="grid-fields">
           <div>
-            <label class="field" for="set-public">Public IP</label>
-            <span class="hint">Your home’s internet address. It goes in each site’s A record.</span>
+            <label class="field" for="set-public"><span data-reach="router">Public IP</span><span data-reach="vps">VPS IP</span></label>
+            <span class="hint" data-reach="router">Your home’s internet address. It goes in each site’s A record.</span>
+            <span class="hint" data-reach="vps">The public address of your VPS. It goes in each site’s A record.</span>
             <div class="input-row">
               <input type="text" id="set-public" value="${esc(settings.publicIp)}" placeholder="203.0.113.7" spellcheck="false">
-              <button type="button" id="detect-ip">Detect</button>
+              <button type="button" id="detect-ip" data-reach="router">Detect</button>
             </div>
           </div>
           <div>
@@ -480,10 +508,10 @@ function renderSettings() {
         </div>
       </section>
 
-      <section class="card" aria-labelledby="router-h">
+      <section class="card" aria-labelledby="router-h" data-reach="router">
         <div class="card-head">
           <h2 id="router-h">Router: one rule for all sites</h2>
-          <span class="pill ${router.cls}">${icon(router.icon)}${router.text}</span>
+          <span class="pill ${route.cls}">${icon(route.icon)}${route.text}</span>
         </div>
         <p class="lead" style="margin-top: 6px">Add this port forward in your router, often under Port forwarding, Virtual server or NAT.</p>
         <div class="route">
@@ -493,6 +521,21 @@ function renderSettings() {
         </div>
         <p class="muted small" style="margin-top: 12px">umbrelOS uses port 443 itself, so Castell listens on ${data.hostPort}. Visitors still connect on 443.
           Leave any “remote host” field empty, and enable the rule after saving.</p>
+      </section>
+
+      <section class="card" aria-labelledby="vps-h" data-reach="vps">
+        <div class="card-head">
+          <h2 id="vps-h">VPS tunnel: one route for all sites</h2>
+          <span class="pill ${route.cls}">${icon(route.icon)}${route.text}</span>
+        </div>
+        <p class="lead" style="margin-top: 6px">Set this up on your VPS. New sites need no changes there.</p>
+        <div class="route">
+          <div><span class="k">VPS, from the internet</span><span class="v">TCP 443</span></div>
+          <div class="arrow">${icon('arrow')}</div>
+          <div><span class="k">Tunnel to this Umbrel</span><span class="v">port ${data.hostPort}</span></div>
+        </div>
+        <p class="muted small" style="margin-top: 12px">Use a TCP proxy such as HAProxy, not packet forwarding, and don’t let it decrypt anything: TLS has to end here, with each site’s key.
+          Only allow the VPS to reach port ${data.hostPort}. Your router doesn’t need any port forward for Castell.</p>
       </section>
 
       <section class="card" aria-labelledby="dns-h">
@@ -509,6 +552,15 @@ function renderSettings() {
     </form>
   </div>`;
 
+  // Shows what belongs to the chosen route; saving is what makes the choice stick
+  const showReach = reach => {
+    for (const el of app.querySelectorAll('[data-reach]')) el.hidden = el.dataset.reach !== reach;
+  };
+  showReach(vps ? 'vps' : 'router');
+  for (const radio of app.querySelectorAll('input[name="reach"]')) {
+    radio.onchange = () => showReach(radio.value);
+  }
+
   document.getElementById('detect-ip').onclick = event => busy(event.currentTarget, async () => {
     const {ip} = await api('GET', 'api/public-ip');
     document.getElementById('set-public').value = ip;
@@ -518,6 +570,7 @@ function renderSettings() {
     event.preventDefault();
     busy(event.submitter, async () => {
       await api('PUT', 'api/settings', {
+        reach: app.querySelector('input[name="reach"]:checked').value,
         publicIp: document.getElementById('set-public').value,
         lanIp: document.getElementById('set-lan').value,
         dnsServer: document.getElementById('set-dns').value,
@@ -537,7 +590,7 @@ function siteSteps(site, status) {
   const byId = Object.fromEntries(status.checks.map(c => [c.id, c]));
   const has = id => Boolean(byId[id]);
   const records = has('dns-a') && has('dns-tlsa') ? worst([byId['dns-a'].status, byId['dns-tlsa'].status]) : 'todo';
-  const router = has('public') ? byId.public.status : 'todo';
+  const route = has('public') ? byId.public.status : 'todo';
   let content = 'todo';
   if (site.mode === 'proxy') {
     content = has('caddy') ? byId.caddy.status : 'todo';
@@ -549,7 +602,7 @@ function siteSteps(site, status) {
   return [
     {name: 'DNS records', state: records},
     {name: 'Delegation', state: 'manual'},
-    {name: 'Router', state: router},
+    {name: viaVps() ? 'VPS' : 'Router', state: route},
     {name: 'Content', state: content},
     {name: 'Live with DANE', state: live},
   ];
@@ -558,8 +611,8 @@ function siteSteps(site, status) {
 function recordCard(type, name, value, check, missingValue) {
   let cls = '', label = 'Not checked', note = '';
   if (missingValue) {
-    cls = 'warn'; label = 'Needs your public IP';
-    note = '<p>Set your public IP on the <a href="#/settings">Connection page</a> first.</p>';
+    cls = 'warn'; label = `Needs your ${ipName()}`;
+    note = `<p>Set your ${ipName()} on the <a href="#/settings">Connection page</a> first.</p>`;
   } else if (check) {
     cls = check.status;
     label = check.status === 'ok' ? 'Published, signed'
@@ -691,7 +744,7 @@ function renderSite(site) {
           <h2 id="rec-h">Publish at your DNS host</h2>
           <p class="lead">In the <span class="mono">${esc(name)}</span> zone. Castell checks <span class="mono">${esc(settings.dnsServer)}</span>.</p>
           <div class="records">
-            ${recordCard('A', '@', settings.publicIp || '<your public IP>', byId['dns-a'], !settings.publicIp)}
+            ${recordCard('A', '@', settings.publicIp || `<your ${ipName()}>`, byId['dns-a'], !settings.publicIp)}
             ${recordCard('TLSA', '_443._tcp', `3 1 1 ${site.tlsa}`, byId['dns-tlsa'], false)}
           </div>
           <p class="muted small" style="margin-top: 12px">At Yeil, the TLSA name is entered as <code>_443._tcp</code> inside the <code>${esc(name)}</code> zone. Publish it before sharing the site.</p>
@@ -701,8 +754,10 @@ function renderSite(site) {
               (Yeil: <code>a.ns.yeil.org.</code> and <code>b.ns.yeil.org.</code>). Castell can’t check this step; the DNS checks only pass with DNSSEC once it’s done.</p>
           </details>
           <details class="more">
-            <summary>Router rule (shared by all sites)</summary>
-            <p>TCP 443 → <span class="mono">${esc(lanIp())}:${data.hostPort}</span>. <a href="#/settings">Connection &amp; router</a> has the details.</p>
+            <summary>${viaVps() ? 'VPS route' : 'Router rule'} (shared by all sites)</summary>
+            <p>${viaVps()
+              ? `TCP 443 on the VPS → tunnel → port <span class="mono">${data.hostPort}</span> on this Umbrel.`
+              : `TCP 443 → <span class="mono">${esc(lanIp())}:${data.hostPort}</span>.`} The <a href="#/settings">Connection page</a> has the details.</p>
           </details>
         </section>
 

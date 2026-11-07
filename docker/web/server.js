@@ -318,7 +318,8 @@ route('PUT', /^\/api\/settings$/, async ({body}) => {
   return state.withLock(async () => {
     const current = state.load();
     current.settings = {
-      publicIp: optionalIp(body.publicIp, 'The public IP'),
+      reach: body.reach === 'vps' ? 'vps' : 'router',
+      publicIp: optionalIp(body.publicIp, body.reach === 'vps' ? 'The VPS IP' : 'The public IP'),
       lanIp: optionalIp(body.lanIp, 'The Umbrel LAN IP'),
       dnsServer,
     };

@@ -4,7 +4,7 @@ name: Castell
 tagline: Host your Handshake websites on your Umbrel, secured with DANE
 icon: https://raw.githubusercontent.com/galetaire/castell/main/castell-sites/castell.png
 category: networking
-version: "0.2.3"
+version: "0.3.0"
 port: 4747
 description: >-
   Castell ("castle" in Catalan) hosts websites for your Handshake (HNS) names on
@@ -25,7 +25,7 @@ description: >-
 
   Castell publishes Caddy on host port 8443, because umbrelOS uses port 443
   itself. Forward external TCP port 443 on your router to port 8443 of your
-  Umbrel. Visitors need a DANE-capable Handshake resolver, such as Fingertip
+  Umbrel, or put a VPS in front through a tunnel to keep your home IP private. Visitors need a DANE-capable Handshake resolver, such as Fingertip
   or letsdane.
 
 
@@ -42,9 +42,10 @@ gallery:
   - https://raw.githubusercontent.com/galetaire/castell/main/castell-sites/gallery/2.png
   - https://raw.githubusercontent.com/galetaire/castell/main/castell-sites/gallery/3.png
 releaseNotes: >-
-  A clearer warning when adding a site that forwards another app: use it only
-  if you fully understand the implications, since a static site is the safer
-  option.
+  New VPS tunnel mode: choose how visitors reach your Umbrel on the Connection
+  page. With a VPS in front, your home IP stays private, your router forwards
+  nothing, and the pages and checks follow your setup. Existing installs stay
+  on the router port forward until you change it.
 dependencies: []
 path: ""
 defaultUsername: ""

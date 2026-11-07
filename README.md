@@ -13,7 +13,7 @@ For each name, Castell:
 - creates its private key and a 10-year self-signed certificate (or imports a key you already have, so an existing TLSA record stays valid);
 - computes the `3 1 1` TLSA value;
 - configures Caddy to serve the site, and reloads it;
-- shows the exact `A` and `TLSA` records with copy buttons, and the router rule;
+- shows the exact `A` and `TLSA` records with copy buttons, and the router rule or VPS route;
 - generates `dns-records.txt` and a `README.md` for the site;
 - **verifies** the result: the served certificate matches the TLSA value, both records are published and DNSSEC-signed at your DNS host, and the site answers on your public IP.
 
@@ -23,7 +23,7 @@ Three steps happen outside the Umbrel, so they stay manual:
 |---|---|---|
 | Publish the `A` and `TLSA` records | your DNS host (e.g. Yeil) | per name |
 | Delegate the name (`NS` + `DS` to your DNS host) | Bob Wallet | once per name |
-| Forward TCP 443 → Umbrel:8443 | your router | once, for all names |
+| Forward TCP 443 → Umbrel:8443, or set up a [VPS tunnel](#using-a-vps-instead-of-a-port-forward) | your router, or a VPS | once, for all names |
 
 ## How it works
 
@@ -80,8 +80,8 @@ In umbrelOS go to **App Store** → **Community App Stores** → **Manage**, pas
 
 ## Using it
 
-1. **Your connection** (once): press **Detect** for your public IP, check the Umbrel LAN IP, save.
-2. **Router** (once): add the port forward Castell shows.
+1. **Connection** (once): choose how visitors reach this Umbrel. With a router, press **Detect** for your public IP and check the Umbrel LAN IP. With a VPS, enter the VPS's IP. Save.
+2. **Router** (once, if you chose the router): add the port forward Castell shows.
 3. **Add a site**: type the name. For a site that already has a TLSA record, choose its `key.pem` to keep it.
 4. Publish the two records it shows at your DNS host; delegate the name in Bob Wallet if you haven't.
 5. Upload the site's folder (or point the name at another app).
@@ -91,6 +91,25 @@ In umbrelOS go to **App Store** → **Community App Stores** → **Manage**, pas
 ### Moving a site from a manual Caddy setup
 
 Castell needs host port 8443, so stop the old container first (for example `cd ~/site-DANE && sudo docker compose down`), then add the name in Castell with its existing `key.pem`. The TLSA value comes out the same, so nothing changes at your DNS host. Upload the site files and run the checks.
+
+## Using a VPS instead of a port forward
+
+A small VPS can stand in front of your Umbrel, so your home IP stays private and your router forwards nothing:
+
+```
+Visitor ──443──> VPS (TCP proxy, can't decrypt)
+                  │  tunnel, outgoing from home (Tailscale, WireGuard)
+                  ▼
+           Umbrel :8443 ──> Caddy (your keys, DANE intact)
+```
+
+1. Connect the VPS and the Umbrel with a tunnel, for example the Tailscale app on Umbrel and Tailscale on the VPS. Only allow the VPS to reach port 8443 of the Umbrel.
+2. Run a **TCP proxy** on the VPS, such as HAProxy in `mode tcp`, that listens on 443 and connects to the Umbrel's tunnel address on port 8443. Don't use a service that decrypts traffic (Cloudflare Tunnel, Tailscale Funnel): TLS has to end on the Umbrel with each site's key, or DANE fails. Don't use packet forwarding (iptables DNAT) either: a proxy opens a new connection, so packets from the internet stop at the VPS.
+3. In Castell's **Connection** page choose **VPS tunnel** and enter the VPS's IP.
+4. Point each site's `A` record at the VPS. The `TLSA` records stay the same.
+5. Once **Run checks** passes, remove the port forward from your router.
+
+Caddy sees the VPS as every visitor's address.
 
 ## Data and backups
 
