@@ -1,4 +1,4 @@
-# Castell
+# Castell 🏰
 
 An [umbrelOS community app store](https://github.com/getumbrel/umbrel-community-app-store) with one app:
 
