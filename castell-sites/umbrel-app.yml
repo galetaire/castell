@@ -4,7 +4,7 @@ name: Castell
 tagline: Host your Handshake websites secured with DANE
 icon: https://raw.githubusercontent.com/galetaire/castell/main/castell-sites/castell.png
 category: networking
-version: "0.3.0"
+version: "0.4.0"
 port: 4747
 description: >-
   Castell hosts websites for your Handshake (HNS) names on
@@ -42,10 +42,10 @@ gallery:
   - https://raw.githubusercontent.com/galetaire/castell/main/castell-sites/gallery/2.png
   - https://raw.githubusercontent.com/galetaire/castell/main/castell-sites/gallery/3.png
 releaseNotes: >-
-  New VPS tunnel mode: choose how visitors reach your Umbrel on the Connection
-  page. With a VPS in front, your home IP stays private, your router forwards
-  nothing, and the pages and checks follow your setup. Existing installs stay
-  on the router port forward until you change it.
+  Stateless DANE proofs (beta): each site can carry, inside its certificate,
+  the on-chain proof of its DS record and the DNSSEC chain of its TLSA record,
+  so Stateless DANE clients can check it without any DNS lookups. Turn it on
+  per site; the proofs refresh daily. Browsers are unaffected.
 dependencies: []
 path: ""
 defaultUsername: ""
