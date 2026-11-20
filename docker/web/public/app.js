@@ -707,6 +707,38 @@ function checksCard(status) {
   </section>`;
 }
 
+// Stateless DANE: the site's certificate also carries the proofs (on-chain DS +
+// DNSSEC chain), so a Stateless DANE client can check it without DNS lookups.
+function sdaneCard(site) {
+  const s = site.sdane;
+  const head = `<div class="card-head"><h2 id="sdane-h" style="font-size: 16px">Stateless DANE proofs</h2><span class="badge small">beta</span></div>`;
+  const about = `<p class="muted small" style="margin: 4px 0 12px">Puts the on-chain proof and the DNSSEC chain inside the certificate, so Stateless DANE clients (SANE, Dit) can check the site without any DNS lookups. Browsers and Fingertip ignore them.</p>`;
+  if (!s.enabled) {
+    return `<section class="card" aria-labelledby="sdane-h">${head}${about}
+      <div class="actions"><button type="button" id="sdane-on">Turn on</button></div>
+    </section>`;
+  }
+  const status = s.inCertificate
+    ? '<span class="pill ok">In the certificate</span>'
+    : `<span class="pill ${s.lastError ? 'fail' : 'idle'}">Not in the certificate yet</span>`;
+  return `<section class="card" aria-labelledby="sdane-h">${head}${about}
+    ${status}
+    ${s.fetchedAt ? `<dl class="kv">
+      <dt>Refreshed</dt><dd>${ago(Date.parse(s.fetchedAt))}</dd>
+      <dt>Signatures valid until</dt><dd>${formatDate(s.signaturesExpire)}</dd>
+      <dt>On-chain proof</dt><dd class="mono">${esc(s.service)}</dd>
+      <dt>DNSSEC chain</dt><dd class="mono">${esc(s.dnsServer)}</dd>
+    </dl>` : ''}
+    ${s.lastError ? `<div class="confirm" role="status"><p><strong>Last try ${ago(Date.parse(s.lastAttempt))} failed.</strong> ${esc(s.lastError)}</p>
+      <p style="margin: 0">${s.inCertificate ? 'The current certificate, with its older proofs, stays in use.' : 'The certificate stays as it is, without proofs.'} Castell tries again within the hour.</p></div>` : ''}
+    <p class="muted small" style="margin: 12px 0 0">Refreshed daily: the proofs are tied to a recent state of the Handshake chain.</p>
+    <div class="actions" style="margin-top: 12px">
+      <button type="button" id="sdane-refresh">${icon('refresh')}Refresh now</button>
+      <button type="button" id="sdane-off">Turn off</button>
+    </div>
+  </section>`;
+}
+
 function renderSite(site) {
   const name = site.name;
   renderChrome(`site:${name}`);
@@ -798,6 +830,8 @@ function renderSite(site) {
               <button type="button" id="remove-cancel">Keep it</button></div>
           </div>` : ''}
         </section>
+
+        ${sdaneCard(site)}
       </div>
     </div>
   </div>`;
@@ -896,6 +930,25 @@ function renderSite(site) {
     route();
     toast('New certificate issued with the same key. Your TLSA record is unchanged.');
   });
+
+  // Stateless DANE proofs: fetching them takes a few seconds
+  const sdaneAction = (id, label, request, done) => {
+    const button = document.getElementById(id);
+    if (!button) return;
+    button.onclick = event => busy(event.currentTarget, async () => {
+      event.currentTarget.textContent = label;
+      const updated = await request();
+      await refresh();
+      route();
+      toast(done(updated.sdane));
+    });
+  };
+  const outcome = s => (s.inCertificate ? 'New certificate issued with fresh proofs. Your TLSA record is unchanged.'
+    : `No proofs yet: ${s.lastError || 'see the card for details'}`);
+  sdaneAction('sdane-on', 'Fetching proofs…', () => api('PUT', `${siteUrl(name)}/sdane`, {enabled: true}), outcome);
+  sdaneAction('sdane-refresh', 'Fetching proofs…', () => api('POST', `${siteUrl(name)}/sdane/refresh`), outcome);
+  sdaneAction('sdane-off', 'Turning off…', () => api('PUT', `${siteUrl(name)}/sdane`, {enabled: false}),
+    () => 'Proofs turned off. The certificate no longer carries them.');
 
   document.getElementById('remove').onclick = () => {
     state.confirmRemove = !state.confirmRemove;

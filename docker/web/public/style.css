@@ -381,6 +381,9 @@ details.more p { font-size: 14px; }
 
 .confirm { margin-top: 14px; padding: 14px; border-radius: 10px; background: var(--fail-soft); font-size: 14px; }
 .confirm p { margin: 0 0 10px; }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 12px 0 0; font-size: 14px; }
+.kv dt { color: var(--muted); }
+.kv dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
 
 /* ---------- connection ---------- */
 

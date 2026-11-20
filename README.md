@@ -15,6 +15,7 @@ For each name, Castell:
 - configures Caddy to serve the site, and reloads it;
 - shows the exact `A` and `TLSA` records with copy buttons, and the router rule or VPS route;
 - generates `dns-records.txt` and a `README.md` for the site;
+- optionally embeds **Stateless DANE proofs** in the certificate ([below](#stateless-dane-proofs-beta));
 - **verifies** the result: the served certificate matches the TLSA value, both records are published and DNSSEC-signed at your DNS host, and the site answers on your public IP.
 
 Three steps happen outside the Umbrel, so they stay manual:
@@ -111,6 +112,19 @@ Visitor ──443──> VPS (TCP proxy, can't decrypt)
 
 Caddy sees the VPS as every visitor's address.
 
+## Stateless DANE proofs (beta)
+
+A site can also carry, inside its certificate, the proofs that [HIP-17](https://hsd-dev.org/HIPs/proposals/0017/) Stateless DANE clients need to check it straight from the Handshake blockchain, without any DNS lookups. Turn it on per site in the **Stateless DANE proofs** card. Browsers and DANE proxies ignore the proofs, so nothing changes for other visitors.
+
+| Extension | Holds | Comes from |
+|---|---|---|
+| `1.3.6.1.4.1.54392.5.1620` | Urkel proof: the TLD's on-chain state, with its DS record | A public proof service (`sdaneproofs.htools.work`, then `sdaneproofs.woodburn.au`) |
+| `1.3.6.1.4.1.54392.5.1621` | DNSSEC chain: the `_443._tcp` TLSA set, the zone's DNSKEY set and DS, with their signatures | Built by Castell from the DNS server in Settings |
+
+Castell checks every signature in the chain, and that the zone's key matches the DS in the on-chain proof, before it uses them. It builds the chain itself because the public services can't for some DNS hosts (Yeil, as of November 2026). The proofs refresh once a day, since clients only accept a recent state of the chain. A failed refresh keeps the current certificate and shows the error; the next try is an hour later. The key never changes, so the TLSA record doesn't either.
+
+Subdomains in the TLD's own zone work; a subdomain delegated to a zone of its own isn't supported yet.
+
 ## Data and backups
 
 Everything is in `~/umbrel/app-data/castell-sites/data` on the Umbrel (`/castell` in the containers):
@@ -130,6 +144,6 @@ trash/              removed sites
 cd docker/web && CASTELL_DATA=../../.dev-data PORT=4747 node server.js
 ```
 
-Open http://localhost:4747. Without a Caddy container the "Caddy serves the site" check fails; to run both, build the image (`docker build -t castell:dev docker`) and use a compose file like `castell-sites/docker-compose.yml` without the `app_proxy` service.
+Open http://localhost:4747. Tests: `npm test` in `docker/web` (Node's built-in runner, no dependencies). Without a Caddy container the "Caddy serves the site" check fails; to run both, build the image (`docker build -t castell:dev docker`) and use a compose file like `castell-sites/docker-compose.yml` without the `app_proxy` service.
 
 Environment variables: `CASTELL_DATA`, `PORT`, `CASTELL_HOST_PORT`, `CASTELL_CADDY_HOST`, `CASTELL_CADDY_PORT`, `CASTELL_CADDY_DATA`, `CASTELL_IP_SERVICE`, `CASTELL_PROXY_HOST`, `CASTELL_TRUSTED_IPS`, `CASTELL_ALLOW_ANY_SOURCE`.

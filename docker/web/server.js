@@ -15,6 +15,7 @@ const certs = require('./lib/certs');
 const checks = require('./lib/checks');
 const dns = require('./lib/dns');
 const docs = require('./lib/docs');
+const sdane = require('./lib/sdane');
 const source = require('./lib/source');
 const state = require('./lib/state');
 const {UserError} = require('./lib/errors');
@@ -73,6 +74,26 @@ function findSite(current, name) {
   return site;
 }
 
+// Stateless DANE proofs last fetched for a site, kept beside its key so a reissue can reuse them
+const proofsFile = name => path.join(state.siteDir(name), 'proofs.json');
+function storedProofs(name) {
+  try {
+    return JSON.parse(fs.readFileSync(proofsFile(name), 'utf8'));
+  } catch (e) {
+    return null;
+  }
+}
+
+// Does the certificate Caddy serves carry both proofs? Read from the file itself.
+function certHasProofs(site) {
+  try {
+    const proofs = sdane.readProofs(fs.readFileSync(certFile(site)));
+    return Boolean(proofs.urkel && proofs.dnssec);
+  } catch (e) {
+    return false;
+  }
+}
+
 function siteView(site) {
   let cert = null;
   try {
@@ -80,7 +101,12 @@ function siteView(site) {
   } catch (e) {
     // shown as "no certificate" in the UI
   }
-  return {...site, tlsa: certs.tlsaFromKeyFile(keyFile(site.name)), cert};
+  return {
+    ...site,
+    tlsa: certs.tlsaFromKeyFile(keyFile(site.name)),
+    cert,
+    sdane: {enabled: false, ...site.sdane, inCertificate: certHasProofs(site)},
+  };
 }
 
 function saveAndReload(current) {
@@ -144,21 +170,103 @@ function deleteSite(name) {
   });
 }
 
+// A new certificate from the same key (so the TLSA record stays valid), with
+// the given Stateless DANE proofs or without any. Call inside state.withLock.
+async function reissue(current, site, proofs) {
+  const oldCert = certFile(site);
+  const certName = newCertName();
+  // Two reissues in the same second would reuse the name and Caddy wouldn't reload
+  if (certName === site.certFile) throw new UserError('A certificate was just issued; wait a moment.');
+  await certs.issueCert(site.name, keyFile(site.name), path.join(state.siteDir(site.name), certName), proofs);
+  site.certFile = certName;
+  saveAndReload(current);
+  // Caddy holds the old certificate in memory until it reloads, so the file can go now
+  await fsp.rm(oldCert, {force: true});
+}
+
 function renewCert(name) {
   return state.withLock(async () => {
     const current = state.load();
     const site = findSite(current, name);
-    const oldCert = certFile(site);
-    const certName = newCertName();
-    // Two reissues in the same second would reuse the name and Caddy wouldn't reload
-    if (certName === site.certFile) throw new UserError('A certificate was just issued; wait a moment.');
-    await certs.issueCert(name, keyFile(name), path.join(state.siteDir(name), certName));
-    site.certFile = certName;
-    saveAndReload(current);
-    // Caddy holds the old certificate in memory until it reloads, so the file can go now
-    await fsp.rm(oldCert, {force: true});
+    await reissue(current, site, site.sdane && site.sdane.enabled ? storedProofs(name) : null);
     return siteView(site);
   });
+}
+
+// ---------- Stateless DANE proofs ----------
+
+// Brings a site's certificate in line with its Stateless DANE setting: fetches
+// fresh proofs and reissues with them when due (force: now), or reissues
+// without them once they're turned off. A failed fetch keeps the certificate
+// that is being served and records the error; the next try is an hour later.
+async function refreshProofs(name, {force = false} = {}) {
+  const before = findSite(state.load(), name);
+  const enabled = Boolean(before.sdane && before.sdane.enabled);
+  const decision = force && enabled ? 'refresh' : sdane.refreshDecision(before.sdane, certHasProofs(before));
+  if (decision === 'none') return siteView(before);
+
+  // Fetching takes a few seconds: outside the lock, so other changes aren't held up
+  let proofs = null;
+  let error = null;
+  if (decision === 'refresh') {
+    try {
+      proofs = await sdane.fetchProofs(name, {dnsServer: state.load().settings.dnsServer});
+    } catch (e) {
+      error = e;
+    }
+  }
+
+  return state.withLock(async () => {
+    const current = state.load();
+    const site = findSite(current, name);
+    const stillEnabled = Boolean(site.sdane && site.sdane.enabled);
+    if (decision === 'plain') {
+      if (!stillEnabled && certHasProofs(site)) await reissue(current, site, null);
+      return siteView(site);
+    }
+    if (!stillEnabled) return siteView(site); // turned off while fetching
+    const attempt = new Date().toISOString();
+    if (error) {
+      if (!(error instanceof sdane.ProofError)) console.error(`[Castell] Stateless DANE proofs for ${name}:`, error);
+      site.sdane = {...site.sdane, lastAttempt: attempt, lastError: error.message};
+      state.save(current);
+      return siteView(site);
+    }
+    state.writeAtomic(proofsFile(name), JSON.stringify(proofs, null, 2) + '\n');
+    site.sdane = {
+      enabled: true,
+      fetchedAt: proofs.fetchedAt,
+      service: proofs.service,
+      dnsServer: proofs.dnsServer,
+      signaturesExpire: proofs.signaturesExpire,
+      lastAttempt: attempt,
+      lastError: null,
+    };
+    await reissue(current, site, proofs);
+    return siteView(site);
+  });
+}
+
+async function setProofs(name, enabled) {
+  await state.withLock(async () => {
+    const current = state.load();
+    const site = findSite(current, name);
+    site.sdane = enabled ? {...site.sdane, enabled: true, lastError: null} : {...site.sdane, enabled: false};
+    state.save(current);
+  });
+  return refreshProofs(name, {force: enabled});
+}
+
+// The daily job: every 15 minutes, refresh whatever is due (refreshDecision)
+async function refreshAllProofs() {
+  for (const site of state.load().sites) {
+    if (!(site.sdane && site.sdane.enabled) && !certHasProofs(site)) continue;
+    try {
+      await refreshProofs(site.name);
+    } catch (e) {
+      console.error(`[Castell] Stateless DANE refresh for ${site.name}:`, e.message);
+    }
+  }
 }
 
 // ---------- site files ----------
@@ -338,6 +446,13 @@ route('DELETE', /^\/api\/sites\/([^/]+)$/, async ({params}) => {
 });
 route('POST', /^\/api\/sites\/([^/]+)\/renew$/, async ({params}) => renewCert(params[0]));
 
+route('PUT', /^\/api\/sites\/([^/]+)\/sdane$/, async ({params, body}) => setProofs(params[0], body.enabled === true));
+route('POST', /^\/api\/sites\/([^/]+)\/sdane\/refresh$/, async ({params}) => {
+  const site = findSite(state.load(), params[0]);
+  if (!(site.sdane && site.sdane.enabled)) throw new UserError('Turn on Stateless DANE proofs for this site first.');
+  return refreshProofs(params[0], {force: true});
+});
+
 route('POST', /^\/api\/sites\/([^/]+)\/verify$/, async ({params}) => {
   const current = state.load();
   const site = findSite(current, params[0]);
@@ -426,3 +541,8 @@ server.listen(PORT, () => {
   console.log(`[Castell] Listening on port ${PORT}. Data folder: ${state.DATA_DIR}`);
   console.log(`[Castell] ${source.describe()}`);
 });
+
+// Stateless DANE proofs: a first pass shortly after start, then every 15 minutes
+// (each site is only refreshed when due: daily, or an hour after a failure)
+setTimeout(refreshAllProofs, 60 * 1000);
+setInterval(refreshAllProofs, 15 * 60 * 1000);

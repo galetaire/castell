@@ -8,7 +8,7 @@
 const dgram = require('dgram');
 const net = require('net');
 
-const TYPES = {A: 1, TLSA: 52, RRSIG: 46, OPT: 41};
+const TYPES = {A: 1, DS: 43, RRSIG: 46, DNSKEY: 48, TLSA: 52, OPT: 41};
 const RCODES = {0: 'NOERROR', 1: 'FORMERR', 2: 'SERVFAIL', 3: 'NXDOMAIN', 5: 'REFUSED'};
 const TIMEOUT = 6000;
 
@@ -128,18 +128,60 @@ function parseServer(server) {
   return {host: match[1] || match[2], port: Number(match[3] || 53)};
 }
 
+// One question to the server, by whichever transport it takes; returns the raw answer.
+async function exchange(server, name, type) {
+  if (/^https:\/\//i.test(server)) return queryDoh(server, encodeQuery(name, TYPES[type], {recursive: true}));
+  const {host, port} = parseServer(server);
+  const packet = encodeQuery(name, TYPES[type], {recursive: false});
+  const answer = await queryUdp(host, port, packet);
+  return answer[2] & 0x02 ? queryTcp(host, port, packet) : answer;
+}
+
 async function query(server, name, type) {
-  let response;
-  if (/^https:\/\//i.test(server)) {
-    response = parseResponse(await queryDoh(server, encodeQuery(name, TYPES[type], {recursive: true})));
-  } else {
-    const {host, port} = parseServer(server);
-    const packet = encodeQuery(name, TYPES[type], {recursive: false});
-    response = parseResponse(await queryUdp(host, port, packet));
-    if (response.truncated) response = parseResponse(await queryTcp(host, port, packet));
-  }
+  const response = parseResponse(await exchange(server, name, type));
   response.answers = response.answers.filter(answer => answer.type === type);
   return response;
 }
 
-module.exports = {query, encodeQuery, parseResponse, parseServer};
+// A (possibly compressed) name, lower-cased, without the trailing dot ('' = root).
+function readName(buf, off) {
+  const labels = [];
+  let end = null;
+  for (let hops = 0; hops < 64; hops++) {
+    const len = buf[off];
+    if (len === undefined) throw new Error('truncated DNS answer');
+    if (len === 0) return {name: labels.join('.'), end: end ?? off + 1};
+    if ((len & 0xc0) === 0xc0) {
+      if (end === null) end = off + 2;
+      off = buf.readUInt16BE(off) & 0x3fff;
+      continue;
+    }
+    labels.push(buf.toString('latin1', off + 1, off + 1 + len).toLowerCase());
+    off += len + 1;
+  }
+  throw new Error('DNS name compression loop');
+}
+
+// The answer section as raw records: {name, type, ttl, rdata}. The rdata of the
+// types used for DANE proofs (DNSKEY, DS, TLSA, RRSIG) holds no compressed names.
+async function queryRecords(server, name, type) {
+  const buf = await exchange(server, name, type);
+  let off = 12;
+  for (let i = buf.readUInt16BE(4); i > 0; i--) off = skipName(buf, off) + 4;
+  const records = [];
+  for (let i = buf.readUInt16BE(6); i > 0; i--) {
+    const owner = readName(buf, off);
+    off = owner.end;
+    const length = buf.readUInt16BE(off + 8);
+    records.push({
+      name: owner.name,
+      type: buf.readUInt16BE(off),
+      ttl: buf.readUInt32BE(off + 4),
+      rdata: Buffer.from(buf.subarray(off + 10, off + 10 + length)),
+    });
+    off += 10 + length;
+  }
+  return {rcode: RCODES[buf[3] & 0xf] || `RCODE ${buf[3] & 0xf}`, records};
+}
+
+module.exports = {query, queryRecords, encodeQuery, parseResponse, parseServer, TYPES};

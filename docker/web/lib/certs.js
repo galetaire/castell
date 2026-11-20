@@ -5,6 +5,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 const {promisify} = require('util');
 const {UserError} = require('./errors');
+const sdane = require('./sdane');
 
 const run = promisify(execFile);
 const OPENSSL = process.env.CASTELL_OPENSSL || 'openssl';
@@ -27,11 +28,26 @@ async function generateKey(keyFile) {
 
 // Self-signed, valid for 10 years, for the name and its subdomains. DANE (3 1 1)
 // pins the public key, so issuing a new certificate from the same key keeps the TLSA record valid.
-async function issueCert(name, keyFile, certFile) {
-  await openssl([
-    'req', '-x509', '-new', '-key', keyFile, '-out', certFile, '-days', String(CERT_DAYS),
-    '-subj', `/CN=${name}`, '-addext', `subjectAltName=DNS:${name},DNS:*.${name}`,
-  ]);
+// With proofs ({urkel, dnssec} hex), the certificate also carries the Stateless
+// DANE extensions (lib/sdane.js); they're a few KB, so they go through a config file.
+async function issueCert(name, keyFile, certFile, proofs = null) {
+  if (!proofs) {
+    await openssl([
+      'req', '-x509', '-new', '-key', keyFile, '-out', certFile, '-days', String(CERT_DAYS),
+      '-subj', `/CN=${name}`, '-addext', `subjectAltName=DNS:${name},DNS:*.${name}`,
+    ]);
+    return;
+  }
+  const configFile = `${certFile}.cnf`;
+  fs.writeFileSync(configFile, sdane.opensslConfig(name, proofs));
+  try {
+    await openssl([
+      'req', '-x509', '-new', '-key', keyFile, '-out', certFile, '-days', String(CERT_DAYS),
+      '-config', configFile, '-extensions', 'ext',
+    ]);
+  } finally {
+    fs.rmSync(configFile, {force: true});
+  }
 }
 
 // An existing key, e.g. from a site hosted elsewhere, so its TLSA record stays the same.
