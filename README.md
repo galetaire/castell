@@ -2,7 +2,7 @@
 
 An [umbrelOS community app store](https://github.com/getumbrel/umbrel-community-app-store) with one app:
 
-- **Castell** (`castell-sites`): hosts websites for your **Handshake (HNS)** names on your Umbrel, over HTTPS secured with **DANE** (a `TLSA` record) instead of a certificate authority. *Castell* is Catalan for "castle".
+- **Castell** (`castell-sites`): hosts websites for your **Handshake (HNS)** names on your Umbrel, over HTTPS secured with **DANE** (a `TLSA` record) instead of a certificate authority.
 
 One install serves as many names as you like, each either a **static site** (upload a folder) or **another app** (Castell forwards the name to it, for dynamic sites).
 
