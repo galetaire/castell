@@ -69,12 +69,6 @@ docker/web/public/fonts/           IBM Plex Sans and Mono, bundled (SIL Open Fon
 .github/workflows/build-image.yml  builds and pushes ghcr.io/<owner>/castell (amd64 + arm64)
 ```
 
-## Publishing
-
-1. Push this repository to `github.com/galetaire/castell`. The workflow builds `ghcr.io/galetaire/castell:<version>` for amd64 and arm64.
-2. The first time, open the package on GitHub (**Packages → castell → Package settings**) and set its visibility to **Public**, so Umbrels can pull it without logging in.
-3. For a new release: bump `version` in `castell-sites/umbrel-app.yml` **and** the image tag in `castell-sites/docker-compose.yml`, then push.
-
 ## Installing
 
 In umbrelOS go to **App Store** → **Community App Stores** → **Manage**, paste `https://github.com/galetaire/castell` and install **Castell**.
